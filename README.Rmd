@@ -148,16 +148,16 @@ coffee_height %>%
   aes(x = height) + 
   geom_rug() + 
   geom_histogram() + 
-  # geom_xrange_group(), show scale, range at y is zero
-  qlayer(stat = qstat_group(compute_scale),
+  # 1. geom_xrange_group(), show scale, range at y is zero
+  qlayer(stat = qstat(compute_scale),
          geom = GeomSegment) + 
-  # geom_xmean() add balancing point
-  qlayer(stat = qstat_group(compute_xmean_at_y0,
+  # 2. geom_xmean() add balancing point
+  qlayer(stat = qstat(compute_xmean_at_y0,
                       default_aes = aes(vjust = after_stat(1),
                                               label = after_stat("^"))),
          geom = qproto_update(GeomText, aes(size = 7))) + 
-  # geom_xmean_label() add numeric label
-  qlayer(stat = qstat_group(compute_xmean_at_y0,
+  # 3. geom_xmean_label() add numeric label
+  qlayer(stat = qstat(compute_xmean_at_y0,
                       default_aes = aes(vjust = after_stat(0),
                                         label = after_stat(round(x, 2)))),
          geom = GeomLabel) + 
@@ -194,6 +194,10 @@ ggplot(palmerpenguins::penguins) +
                                             linewidth = 1)),
          aes(color = species))
 
+
+
+
+two_way_probs <- tibble()
 
 
 ```

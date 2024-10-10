@@ -243,26 +243,21 @@ coffee_height %>%
   aes(x = height) + 
   geom_rug() + 
   geom_histogram() + 
-  # geom_xrange_group(), show scale, range at y is zero
-  qlayer(stat = qstat_group(compute_scale),
+  # 1. geom_xrange_group(), show scale, range at y is zero
+  qlayer(stat = qstat(compute_scale),
          geom = GeomSegment) + 
-  # geom_xmean() add balancing point
-  qlayer(stat = qstat_group(compute_xmean_at_y0,
+  # 2. geom_xmean() add balancing point
+  qlayer(stat = qstat(compute_xmean_at_y0,
                       default_aes = aes(vjust = after_stat(1),
                                               label = after_stat("^"))),
          geom = qproto_update(GeomText, aes(size = 7))) + 
-  # geom_xmean_label() add numeric label
-  qlayer(stat = qstat_group(compute_xmean_at_y0,
+  # 3. geom_xmean_label() add numeric label
+  qlayer(stat = qstat(compute_xmean_at_y0,
                       default_aes = aes(vjust = after_stat(0),
                                         label = after_stat(round(x, 2)))),
          geom = GeomLabel) + 
   labs(title = "Does the average height for this group differ statistically from the of 66 cm")
 #> `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.
-#> Warning: Computation failed in `stat_temp()`.
-#> Computation failed in `stat_temp()`.
-#> Computation failed in `stat_temp()`.
-#> Caused by error in `compute_group()`:
-#> ! Not implemented.
 ```
 
 <img src="man/figures/README-unnamed-chunk-3-4.png" width="100%" />
@@ -273,16 +268,6 @@ last_plot() +
   facet_wrap(~ coffee, ncol = 1) + 
   labs(title = "Is there a statistically significant difference between the coffee drinkers\n and non-drinkers for this group?")
 #> `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.
-#> Warning: Computation failed in `stat_temp()`.
-#> Caused by error in `compute_group()`:
-#> ! Not implemented.
-#> Warning: Computation failed in `stat_temp()`.
-#> Computation failed in `stat_temp()`.
-#> Computation failed in `stat_temp()`.
-#> Computation failed in `stat_temp()`.
-#> Computation failed in `stat_temp()`.
-#> Caused by error in `compute_group()`:
-#> ! Not implemented.
 ```
 
 <img src="man/figures/README-unnamed-chunk-3-5.png" width="100%" />
@@ -336,3 +321,11 @@ ggplot(palmerpenguins::penguins) +
 ```
 
 <img src="man/figures/README-unnamed-chunk-4-1.png" width="100%" />
+
+``` r
+
+
+
+
+two_way_probs <- tibble()
+```
