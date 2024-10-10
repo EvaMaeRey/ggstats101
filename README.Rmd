@@ -1,0 +1,201 @@
+---
+output: github_document
+---
+
+<!-- README.md is generated from README.Rmd. Please edit that file -->
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.path = "man/figures/README-",
+  out.width = "100%"
+)
+```
+
+# ggstats101
+
+<!-- badges: start -->
+<!-- badges: end -->
+
+The goal of ggstats101 is to model a clean and efficient way to create functionality that's in line with ggplot2 grammar for an intro to statistics/probability. Many examples are from the ISI curriculum. https://www.isi-stats.com/isi2nd/data.html
+
+It uses 'statexpress' short-hand as a first cut at exploring functionality.
+
+Without extension:
+
+```{r}
+library(tidyverse)
+donor <- read_delim("https://www.isi-stats.com/isi/data/prelim/OrganDonor.txt") 
+
+donor
+
+donor |>
+  ggplot() +
+  aes(x = Choice) + 
+  geom_dotplot()
+
+donor |>
+  ggplot() +
+  aes(x = Choice) + 
+  geom_bar()
+
+donor %>%
+    janitor::tabyl(Choice) %>%
+    janitor::adorn_totals()
+```
+
+
+# rethinking
+
+```{r}
+library(tidyverse)
+library(statexpress)
+
+compute_group_bricks <- function(data, scales){
+  
+  if(!is.null(data$weight)){data %>% uncount(weight)}
+  
+  data %>% 
+    mutate(row = row_number()) %>% 
+    mutate(y = row - .5)
+  
+}
+
+compute_xmean_at_y0 <- function(data, scales){
+  
+  data %>% 
+    summarise(x = mean(x),
+              y = 0) 
+  
+}
+
+compute_scale <- function(data, scales){
+  
+  data %>% 
+    summarise(min_x = min(x),
+              xend = max(x),
+              y = 0,
+              yend = 0) %>% 
+    rename(x = min_x)
+  
+}
+
+
+
+donor |>
+  ggplot() +
+  aes(x = Choice |> fct_rev()) +
+  # 1. geom_stack() -- show counts in a count-y way (i.e. bricks!), 
+  # with a good amount of space in-between stacks
+  qlayer(stat = qstat(compute_group_bricks,
+                      default_aes = aes(width = after_stat(.2))),
+         geom = qproto_update(GeomTile, 
+                              aes(color = "whitesmoke"))
+         ) +
+  # 2. geom_stack_label() -- label stacks
+  qlayer(stat = qproto_update(StatCount, aes(label = after_stat(count),
+                                             vjust = after_stat(0))),
+         geom = GeomText) +
+  # 3. geom_xrange, show scale, range at y is zero
+  qlayer(stat = qstat_panel(compute_scale),
+         geom = GeomSegment) +
+  # 3. geom_prop, show prop, i.e. balancing point
+  qlayer(stat = qstat_panel(compute_xmean_at_y0,
+                            default_aes = aes(vjust = after_stat(1),
+                                              label = after_stat("^"))),
+         geom = qproto_update(GeomText, aes(size = 6))) + 
+  # 5. geom_prop_label, labeling prop, balancing point
+  qlayer(stat = qstat_panel(compute_xmean_at_y0,
+                            default_aes = aes(label = after_stat(round(x - 1, 2)),
+                                              vjust = after_stat(0))),
+         geom = qproto_update(GeomLabel, aes(fill = NA, label.size = NA))) ->
+proportion_balance_plot  
+  
+proportion_balance_plot
+
+
+proportion_balance_plot +   # by 
+  # stamp_prop, assertion, point
+  annotate(geom = GeomText, x = .5 + 1, y = 0, vjust = 1, label = "^", 
+           color = "red", size = 6) +
+  # stamp_prop_label
+  annotate(geom = GeomLabel, x = .5 + 1, y = 0, vjust = 0, label = .5, 
+           color = "red", fill = NA) + 
+  labs(title = "Is there statistical evidence that choice to be an organ donar differs from coin flip")
+  
+
+layer_data(i = 3)
+
+proportion_balance_plot + 
+  facet_wrap(~Default, ncol = 1) + 
+  labs(title = "Is there statistical evidence framing option as 'opt-in' v 'opt-out'\nlead to different outcomes?")
+
+
+coffee_height <- read_delim("https://www.isi-stats.com/isi/data/chap6/CoffeeHeight.txt")
+
+coffee_height
+
+
+
+
+
+
+
+
+coffee_height %>% 
+  ggplot() + 
+  aes(x = height) + 
+  geom_rug() + 
+  geom_histogram() + 
+  # geom_xrange_group(), show scale, range at y is zero
+  qlayer(stat = qstat_group(compute_scale),
+         geom = GeomSegment) + 
+  # geom_xmean() add balancing point
+  qlayer(stat = qstat_group(compute_xmean_at_y0,
+                      default_aes = aes(vjust = after_stat(1),
+                                              label = after_stat("^"))),
+         geom = qproto_update(GeomText, aes(size = 7))) + 
+  # geom_xmean_label() add numeric label
+  qlayer(stat = qstat_group(compute_xmean_at_y0,
+                      default_aes = aes(vjust = after_stat(0),
+                                        label = after_stat(round(x, 2)))),
+         geom = GeomLabel) + 
+  labs(title = "Does the average height for this group differ statistically from the of 66 cm")
+
+last_plot() + 
+  facet_wrap(~ coffee, ncol = 1) + 
+  labs(title = "Is there a statistically significant difference between the coffee drinkers\n and non-drinkers for this group?")
+```
+
+
+
+```{r}
+compute_panel_lm <- function(data, scales){
+  
+  data <- remove_missing(data)
+  model <- lm(data = data, formula = y ~ x + cat)
+  data$y <- model$fitted
+  
+  data
+  
+}
+
+palmerpenguins::penguins %>% 
+  select(x = body_mass_g, y = flipper_length_mm, cat = species) %>% 
+  compute_panel_lm()
+  
+ggplot(palmerpenguins::penguins) + 
+  aes(x = body_mass_g, y = flipper_length_mm, cat = species) + 
+  geom_point() + 
+  # geom_parallel_slopes
+  qlayer(stat = qstat_panel(compute_panel_lm),
+         geom = qproto_update(GeomLine, aes(color = "blue",
+                                            linewidth = 1)),
+         aes(color = species))
+
+
+
+```
+
+
