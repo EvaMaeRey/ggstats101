@@ -1,5 +1,8 @@
 ---
-output: github_document
+output: 
+  html_document:
+    toc: TRUE
+    code_folding: show
 ---
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
@@ -9,51 +12,62 @@ knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>",
   fig.path = "man/figures/README-",
-  out.width = "100%"
+  out.width = "100%",
+  message = F,
+  warning = F
 )
 ```
 
 # ggstats101
 
+
 <!-- badges: start -->
 <!-- badges: end -->
 
-The goal of ggstats101 is to model a clean and efficient way to create functionality that's in line with ggplot2 grammar for an intro to statistics/probability class.  This will allow you to build up plots layer by layer alongside the concepts you build up.  
+The goal of ggstats101 is to model a clean and efficient way to create functionality that's in-line with ggplot2 grammar for an intro to statistics/probability class.  The goal here is that you will be able to build up plots layer by layer right alongside the concepts you build up.  See [light-weight curriculum-targeted extension discussion in ggplot2 extenders] https://github.com/teunbrand/ggplot-extension-club/discussions/39
 
-Many examples are from the ISI curriculum. https://www.isi-stats.com/isi2nd/data.html
+Many data examples are from the ISI curriculum. https://www.isi-stats.com/isi2nd/data.html
 
-This project explores using 'statexpress' as a short-hand for experimenting with layers. 
+![](http://www.isi-stats.com/isi2nd/ISI1-2nd-cover.jpg)
 
-Without extension:
+This project uses [{statexpress}](https://github.com/EvaMaeRey/statexpress) as a short-hand for experimenting with layers. 
 
-```{r}
+
+
+
+# proportions, observed v. asserted lesson...
+
+```{r, eval = F}
 library(tidyverse)
-donor <- read_delim("https://www.isi-stats.com/isi/data/prelim/OrganDonor.txt") %>%
+
+isi_donor_url <- "https://www.isi-stats.com/isi/data/prelim/OrganDonor.txt"
+
+donor <- read_delim(isi_donor_url) %>%
   mutate(Choice = fct_rev(Choice))
 
-donor
+donor %>% head()
 
 donor |>
   ggplot() +
-  aes(x = Choice) + 
-  geom_dotplot()
-
-donor |>
-  ggplot() +
-  aes(x = Choice) + 
-  geom_bar()
-
-donor %>%
-    janitor::tabyl(Choice) %>%
-    janitor::adorn_totals()
+  aes(x = Choice) +
+  geom_stack() +       # custom bar layer
+  geom_stack_label() + # label stack, also see geom_stack_label_percent()
+  geom_x_support() +   # line under range of x
+  geom_x_prop() +      # balancing point
+  geom_x_prop_label()  # balancing point (proportion) label
 ```
 
 
-# rethinking
 
-```{r}
-library(tidyverse)
+```{r, class.source = 'fold-hide'}
 library(statexpress)
+library(tidyverse)
+
+isi_donor_url <- "https://www.isi-stats.com/isi/data/prelim/OrganDonor.txt"
+
+donor <- read_delim(isi_donor_url) %>%
+  mutate(Choice = fct_rev(Choice))
+
 
 compute_group_bricks <- function(data, scales){
   
@@ -85,10 +99,6 @@ compute_scale <- function(data, scales){
 }
 
 
-
-
-
-
 donor |>
   ggplot() +
   aes(x = Choice) +
@@ -118,13 +128,22 @@ donor |>
 proportion_balance_plot  
   
 proportion_balance_plot
-
-
-
 ```  
   
   
-```{r}  
+## Compare with asserted (null)  
+
+
+
+```{r, eval = F}
+last_plot() + 
+  stamp_x_prop(prop = .5) + 
+  stamp_x_prop_label(prop = .5)
+```
+  
+  
+  
+```{r, class.source = 'fold-hide'}  
 proportion_balance_plot +   # by 
   # stamp_prop, assertion, point
   annotate(geom = GeomText, x = .5 + 1, y = 0, vjust = 1, label = "^", 
@@ -134,18 +153,21 @@ proportion_balance_plot +   # by
            color = "red", fill = NA) + 
   labs(title = "Is there statistical evidence that choice to be\nan organ donar differs from coin flip") ->
 ho; ho
-  
-null = 0.5  # from null hypothesis
-n = 161  # sample size
-phat = 108/n  # sample proportion of successes
-sd = sqrt(null * (1 - null)/n)  # sd of the null distribution
+```
 
+## Distribution for the null
 
+```{r, eval = F}
+last_plot() + 
+  geom_prop_null_distribution(prop = .5)
+```
+
+```{r, class.source = 'fold-hide'}  
 compute_dnorm_prop <- function(data, scales, null = .5, dist_sds = seq(-3.5, 3.5, by = .1)){
 
   n <- nrow(data)
   
-  sd = sqrt(null * (1 - null)/n)
+  sd = sqrt(null * (1 - null)/n) # sd of the null distribution
   
   q <- dist_sds * sd + null
   
@@ -168,21 +190,59 @@ ho +
            geom = qproto_update(GeomSegment, aes(linetype = "dotted")),
            mapping = aes(x = 1, y = 1),
            dist_sds = -3:3)
+```
 
+# Zooming in...
 
+```{r}
 last_plot() + 
   coord_cartesian(xlim = c(1.45, 1.65), ylim = c(0, 15))
+```
 
-# layer_data(i = 3)
+# two-proportions
 
+
+```{r, eval = F}
+donor |>
+  ggplot() +
+  aes(x = Choice) +
+  geom_stack() +       # custom bar layer
+  geom_stack_label() + # label stack
+  geom_x_support() +   # line under range of x
+  geom_x_prop() +      # balancing point
+  geom_x_prop_label()  # balancing point (proportion) label
+  facet_wrap(~ Default, ncol = 1) #<< faceting
+```
+
+```{r, class.source = 'fold-hide'}
 proportion_balance_plot + 
   facet_wrap(~Default, ncol = 1) + 
   labs(title = "Is there statistical evidence framing option as 'opt-in' v 'opt-out'\nlead to different outcomes?")
+```
 
 
+# Does mean different from asserted or known mean?
+
+```{r, eval = F}
 coffee_height <- read_delim("https://www.isi-stats.com/isi/data/chap6/CoffeeHeight.txt")
 
-coffee_height
+coffee_height %>% head()
+
+coffee_height |>
+  ggplot() +
+  aes(x = height) +
+  geom_rug() +       
+  geom_histogram() +
+  geom_x_support() +   # line under range of x
+  geom_x_mean() +      # balancing point
+  geom_x_mean_label()  # balancing point (proportion) label
+```
+
+
+```{r, class.source = 'fold-hide'}
+coffee_height <- read_delim("https://www.isi-stats.com/isi/data/chap6/CoffeeHeight.txt")
+
+coffee_height %>% head()
 
 coffee_height %>% 
   ggplot() + 
@@ -204,7 +264,17 @@ coffee_height %>%
          geom = GeomLabel) + 
   labs(title = "Does the average height for this group differ statistically from the of 66 cm") ->
 base_c_distribution; base_c_distribution
+```
 
+## compare to known or asserted
+
+```{r, eval = F}
+last_plot() + 
+  stamp_x_mean(mean = 66) +
+  stamp_x_mean_label(mean = 66)
+```
+
+```{r, class.source = 'fold-hide'}
 base_c_distribution +
   # stamp_prop, assertion, point
   annotate(geom = GeomText, x = 66, y = 0, vjust = 1, label = "^", 
@@ -212,10 +282,21 @@ base_c_distribution +
   # stamp_prop_label
   annotate(geom = GeomLabel, x = 66, y = 0, vjust = 0, label = 66, 
            color = "red") 
+```
+
+## overlay distribution for the null
+
+```{r, eval = F}
+last_plot() +
+  geom_tdist(mean = 66)
+```
 
 
 
-compute_dt_continuous <- function(data, scales, mean = NULL, dist_sds = seq(-3.5, 3.5, by = .1)){
+```{r, class.source = 'fold-hide'}
+compute_dt_continuous <- function(data, scales, 
+                                  mean = NULL, 
+                                  dist_sds = seq(-3.5, 3.5, by = .1)){
   
   n = nrow(data)
   if(is.null(mean)){mean <- mean(data$x)}
@@ -247,7 +328,7 @@ last_plot() +
 
 ```
 
-
+# Is means different for groups?
 
 
 ```{r}
@@ -257,14 +338,36 @@ base_c_distribution +
 ```
 
 
+# Linear model
 
+```{r, eval = F}
+ggplot(palmerpenguins::penguins) + 
+  aes(x = body_mass_g, 
+      y = flipper_length_mm, 
+      cat = species) + 
+  geom_point() + 
+  aes(color = species) ->
+base_plot
 
+base_plot +
+  geom_lm(y ~ x)
 
-```{r}
-compute_panel_lm <- function(data, scales){
+base_plot +
+  geom_lm(y ~ cat)
+
+base_plot +
+  geom_lm(y ~ x + cat)
+
+base_plot +
+  geom_lm(y ~ x * cat)
+
+```
+
+```{r, class.source = 'fold-hide', fig.show='hold', out.width="24%"}
+compute_panel_lm_cat <- function(data, scales, formula = y ~ x + cat){
   
   data <- remove_missing(data)
-  model <- lm(data = data, formula = y ~ x + cat)
+  model <- lm(data = data, formula = formula)
   data$y <- model$fitted
 
   data
@@ -273,22 +376,51 @@ compute_panel_lm <- function(data, scales){
 
 palmerpenguins::penguins %>% 
   select(x = body_mass_g, y = flipper_length_mm, cat = species) %>% 
-  compute_panel_lm()
+  compute_panel_lm_cat()
   
 ggplot(palmerpenguins::penguins) + 
   aes(x = body_mass_g, y = flipper_length_mm, cat = species) + 
   geom_point() + 
   # geom_lm_xycat
-  qlayer(stat = qstat_panel(compute_panel_lm),
+  aes(color = species) +
+  qlayer(stat = qstat_panel(compute_panel_lm_cat),
          geom = qproto_update(GeomLine, aes(color = "blue",
                                             linewidth = 1)),
-         aes(color = species)) 
+         formula = y ~ x)
+
+ggplot(palmerpenguins::penguins) + 
+  aes(x = body_mass_g, y = flipper_length_mm, cat = species) + 
+  geom_point() + 
+  # geom_lm_xycat
+  aes(color = species) +
+  qlayer(stat = qstat_panel(compute_panel_lm_cat),
+         geom = qproto_update(GeomLine, aes(color = "blue",
+                                            linewidth = 1)),
+         formula = y ~ cat) 
+
+ggplot(palmerpenguins::penguins) + 
+  aes(x = body_mass_g, y = flipper_length_mm, cat = species) + 
+  geom_point() + 
+  # geom_lm_xycat
+  aes(color = species) +
+  qlayer(stat = qstat_panel(compute_panel_lm_cat),
+         geom = qproto_update(GeomLine, aes(color = "blue",
+                                            linewidth = 1))) 
 
 
 
-two_way_probs <- tibble()
 
+
+ggplot(palmerpenguins::penguins) + 
+  aes(x = body_mass_g, y = flipper_length_mm, cat = species) + 
+  geom_point() + 
+  aes(color = species) +
+  # 1. geom_lm_xycat
+  qlayer(stat = qstat_panel(compute_panel_lm_cat),
+         geom = qproto_update(GeomLine, aes(color = "blue",
+                                            linewidth = 1)),
+         formula = y ~ x * cat) 
 
 ```
 
-
+End.
