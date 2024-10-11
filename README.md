@@ -8,11 +8,14 @@
 
 The goal of ggstats101 is to model a clean and efficient way to create
 functionality that’s in line with ggplot2 grammar for an intro to
-statistics/probability. Many examples are from the ISI curriculum.
+statistics/probability class. This will allow you to build up plots
+layer by layer alongside the concepts you build up.
+
+Many examples are from the ISI curriculum.
 <https://www.isi-stats.com/isi2nd/data.html>
 
-It uses ‘statexpress’ short-hand as a first cut at exploring
-functionality.
+This project explores using ‘statexpress’ as a short-hand for
+experimenting with layers.
 
 Without extension:
 
@@ -31,7 +34,8 @@ library(tidyverse)
 ```
 
 ``` r
-donor <- read_delim("https://www.isi-stats.com/isi/data/prelim/OrganDonor.txt") 
+donor <- read_delim("https://www.isi-stats.com/isi/data/prelim/OrganDonor.txt") %>%
+  mutate(Choice = fct_rev(Choice))
 #> Rows: 161 Columns: 2
 #> ── Column specification ────────────────────────────────────────────────────────
 #> Delimiter: "\t"
@@ -46,7 +50,7 @@ donor <- read_delim("https://www.isi-stats.com/isi/data/prelim/OrganDonor.txt")
 donor
 #> # A tibble: 161 × 2
 #>    Default Choice
-#>    <chr>   <chr> 
+#>    <chr>   <fct> 
 #>  1 opt-in  donor 
 #>  2 opt-in  donor 
 #>  3 opt-in  donor 
@@ -88,8 +92,8 @@ donor %>%
     janitor::tabyl(Choice) %>%
     janitor::adorn_totals()
 #>  Choice   n   percent
-#>   donor 108 0.6708075
 #>     not  53 0.3291925
+#>   donor 108 0.6708075
 #>   Total 161 1.0000000
 ```
 
@@ -130,16 +134,18 @@ compute_scale <- function(data, scales){
 
 
 
+
+
+
 donor |>
   ggplot() +
-  aes(x = Choice |> fct_rev()) +
+  aes(x = Choice) +
   # 1. geom_stack() -- show counts in a count-y way (i.e. bricks!), 
   # with a good amount of space in-between stacks
   qlayer(stat = qstat(compute_group_bricks,
                       default_aes = aes(width = after_stat(.2))),
          geom = qproto_update(GeomTile, 
-                              aes(color = "whitesmoke"))
-         ) +
+                              aes(color = "whitesmoke"))) +
   # 2. geom_stack_label() -- label stacks
   qlayer(stat = qproto_update(StatCount, aes(label = after_stat(count),
                                              vjust = after_stat(0))),
@@ -165,8 +171,6 @@ proportion_balance_plot
 <img src="man/figures/README-unnamed-chunk-3-1.png" width="100%" />
 
 ``` r
-
-
 proportion_balance_plot +   # by 
   # stamp_prop, assertion, point
   annotate(geom = GeomText, x = .5 + 1, y = 0, vjust = 1, label = "^", 
@@ -174,27 +178,82 @@ proportion_balance_plot +   # by
   # stamp_prop_label
   annotate(geom = GeomLabel, x = .5 + 1, y = 0, vjust = 0, label = .5, 
            color = "red", fill = NA) + 
-  labs(title = "Is there statistical evidence that choice to be an organ donar differs from coin flip")
+  labs(title = "Is there statistical evidence that choice to be\nan organ donar differs from coin flip") ->
+ho; ho
 ```
 
-<img src="man/figures/README-unnamed-chunk-3-2.png" width="100%" />
+<img src="man/figures/README-unnamed-chunk-4-1.png" width="100%" />
 
 ``` r
   
+null = 0.5  # from null hypothesis
+n = 161  # sample size
+phat = 108/n  # sample proportion of successes
+sd = sqrt(null * (1 - null)/n)  # sd of the null distribution
 
-layer_data(i = 3)
-#>   PANEL x xend y yend colour linewidth linetype alpha
-#> 1     1 1    2 0    0  black       0.5        1    NA
+
+compute_dnorm_prop <- function(data, scales, null = .5, dist_sds = seq(-3.5, 3.5, by = .1)){
+
+  n <- nrow(data)
+  
+  sd = sqrt(null * (1 - null)/n)
+  
+  q <- dist_sds * sd + null
+  
+  data.frame(x = q + 1) %>% 
+    mutate(y = dnorm(q, sd = sd, mean = null))
+  
+}  
+
+ho + 
+  # geom_norm on prop plot
+    qlayer(stat = qstat(compute_dnorm_prop),
+         geom = qproto_update(GeomArea, aes(alpha = .2)),
+         mapping = aes(x = 1, y = 1),
+         # null = .5
+         ) + 
+    # geom_prop_norm w/ sd marks
+    qlayer(stat = qstat(compute_dnorm_prop,
+                        default_aes = aes(xend = after_stat(x), 
+                                          yend = after_stat(0))),
+           geom = qproto_update(GeomSegment, aes(linetype = "dotted")),
+           mapping = aes(x = 1, y = 1),
+           dist_sds = -3:3)
+#> Warning in qlayer(stat = qstat(compute_dnorm_prop), geom = qproto_update(GeomArea, : All aesthetics have length 1, but the data has 161 rows.
+#> ℹ Please consider using `annotate()` or provide this layer with data containing
+#>   a single row.
+#> Warning in qlayer(stat = qstat(compute_dnorm_prop, default_aes = aes(xend = after_stat(x), : All aesthetics have length 1, but the data has 161 rows.
+#> ℹ Please consider using `annotate()` or provide this layer with data containing
+#>   a single row.
 ```
 
+<img src="man/figures/README-unnamed-chunk-4-2.png" width="100%" />
+
 ``` r
+
+
+last_plot() + 
+  coord_cartesian(xlim = c(1.45, 1.65), ylim = c(0, 15))
+#> Warning in qlayer(stat = qstat(compute_dnorm_prop), geom = qproto_update(GeomArea, : All aesthetics have length 1, but the data has 161 rows.
+#> ℹ Please consider using `annotate()` or provide this layer with data containing
+#>   a single row.
+#> All aesthetics have length 1, but the data has 161 rows.
+#> ℹ Please consider using `annotate()` or provide this layer with data containing
+#>   a single row.
+```
+
+<img src="man/figures/README-unnamed-chunk-4-3.png" width="100%" />
+
+``` r
+
+# layer_data(i = 3)
 
 proportion_balance_plot + 
   facet_wrap(~Default, ncol = 1) + 
   labs(title = "Is there statistical evidence framing option as 'opt-in' v 'opt-out'\nlead to different outcomes?")
 ```
 
-<img src="man/figures/README-unnamed-chunk-3-3.png" width="100%" />
+<img src="man/figures/README-unnamed-chunk-4-4.png" width="100%" />
 
 ``` r
 
@@ -231,13 +290,6 @@ coffee_height
 
 ``` r
 
-
-
-
-
-
-
-
 coffee_height %>% 
   ggplot() + 
   aes(x = height) + 
@@ -256,21 +308,82 @@ coffee_height %>%
                       default_aes = aes(vjust = after_stat(0),
                                         label = after_stat(round(x, 2)))),
          geom = GeomLabel) + 
-  labs(title = "Does the average height for this group differ statistically from the of 66 cm")
+  labs(title = "Does the average height for this group differ statistically from the of 66 cm") ->
+base_c_distribution; base_c_distribution
 #> `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.
 ```
 
-<img src="man/figures/README-unnamed-chunk-3-4.png" width="100%" />
+<img src="man/figures/README-unnamed-chunk-4-5.png" width="100%" />
+
+``` r
+
+base_c_distribution +
+  # stamp_prop, assertion, point
+  annotate(geom = GeomText, x = 66, y = 0, vjust = 1, label = "^", 
+           color = "red", size = 7) +
+  # stamp_prop_label
+  annotate(geom = GeomLabel, x = 66, y = 0, vjust = 0, label = 66, 
+           color = "red") 
+#> `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.
+```
+
+<img src="man/figures/README-unnamed-chunk-4-6.png" width="100%" />
+
+``` r
+
+
+
+compute_dt_continuous <- function(data, scales, mean = NULL, dist_sds = seq(-3.5, 3.5, by = .1)){
+  
+  n = nrow(data)
+  if(is.null(mean)){mean <- mean(data$x)}
+  s = sd(data$x)  # sample standard deviation
+  sd = s/sqrt(n)  #
+
+  # q <- dist_sds * sd
+  
+  data.frame(x = mean + dist_sds) %>% 
+    mutate(y = dt(dist_sds, df = n-1)) %>% 
+    mutate(y = y/max(y))
+
+  
+}
+
+coffee_height %>% 
+  rename(x = height) %>% 
+  compute_dt_continuous() %>% 
+  head()
+#>          x           y
+#> 1 63.85294 0.003742670
+#> 2 63.95294 0.004973024
+#> 3 64.05294 0.006573744
+#> 4 64.15294 0.008643080
+#> 5 64.25294 0.011300496
+#> 6 64.35294 0.014689561
+```
 
 ``` r
 
 last_plot() + 
+  qlayer(stat = qstat(compute_dt_continuous),
+         geom = qproto_update(GeomArea, 
+                              aes(alpha = .3)),
+         mean = 66,
+         fill = "red"
+         )
+#> `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.
+```
+
+<img src="man/figures/README-unnamed-chunk-4-7.png" width="100%" />
+
+``` r
+base_c_distribution + 
   facet_wrap(~ coffee, ncol = 1) + 
   labs(title = "Is there a statistically significant difference between the coffee drinkers\n and non-drinkers for this group?")
 #> `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.
 ```
 
-<img src="man/figures/README-unnamed-chunk-3-5.png" width="100%" />
+<img src="man/figures/README-unnamed-chunk-5-1.png" width="100%" />
 
 ``` r
 compute_panel_lm <- function(data, scales){
@@ -278,7 +391,7 @@ compute_panel_lm <- function(data, scales){
   data <- remove_missing(data)
   model <- lm(data = data, formula = y ~ x + cat)
   data$y <- model$fitted
-  
+
   data
   
 }
@@ -309,21 +422,20 @@ palmerpenguins::penguins %>%
 ggplot(palmerpenguins::penguins) + 
   aes(x = body_mass_g, y = flipper_length_mm, cat = species) + 
   geom_point() + 
-  # geom_parallel_slopes
+  # geom_lm_xycat
   qlayer(stat = qstat_panel(compute_panel_lm),
          geom = qproto_update(GeomLine, aes(color = "blue",
                                             linewidth = 1)),
-         aes(color = species))
+         aes(color = species)) 
 #> Warning: Removed 2 rows containing missing values or values outside the scale
 #> range.
 #> Warning: Removed 2 rows containing missing values or values outside the scale range
 #> (`geom_point()`).
 ```
 
-<img src="man/figures/README-unnamed-chunk-4-1.png" width="100%" />
+<img src="man/figures/README-unnamed-chunk-6-1.png" width="100%" />
 
 ``` r
-
 
 
 

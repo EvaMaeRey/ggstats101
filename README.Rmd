@@ -18,15 +18,18 @@ knitr::opts_chunk$set(
 <!-- badges: start -->
 <!-- badges: end -->
 
-The goal of ggstats101 is to model a clean and efficient way to create functionality that's in line with ggplot2 grammar for an intro to statistics/probability. Many examples are from the ISI curriculum. https://www.isi-stats.com/isi2nd/data.html
+The goal of ggstats101 is to model a clean and efficient way to create functionality that's in line with ggplot2 grammar for an intro to statistics/probability class.  This will allow you to build up plots layer by layer alongside the concepts you build up.  
 
-It uses 'statexpress' short-hand as a first cut at exploring functionality.
+Many examples are from the ISI curriculum. https://www.isi-stats.com/isi2nd/data.html
+
+This project explores using 'statexpress' as a short-hand for experimenting with layers. 
 
 Without extension:
 
 ```{r}
 library(tidyverse)
-donor <- read_delim("https://www.isi-stats.com/isi/data/prelim/OrganDonor.txt") 
+donor <- read_delim("https://www.isi-stats.com/isi/data/prelim/OrganDonor.txt") %>%
+  mutate(Choice = fct_rev(Choice))
 
 donor
 
@@ -83,16 +86,18 @@ compute_scale <- function(data, scales){
 
 
 
+
+
+
 donor |>
   ggplot() +
-  aes(x = Choice |> fct_rev()) +
+  aes(x = Choice) +
   # 1. geom_stack() -- show counts in a count-y way (i.e. bricks!), 
   # with a good amount of space in-between stacks
   qlayer(stat = qstat(compute_group_bricks,
                       default_aes = aes(width = after_stat(.2))),
          geom = qproto_update(GeomTile, 
-                              aes(color = "whitesmoke"))
-         ) +
+                              aes(color = "whitesmoke"))) +
   # 2. geom_stack_label() -- label stacks
   qlayer(stat = qproto_update(StatCount, aes(label = after_stat(count),
                                              vjust = after_stat(0))),
@@ -115,6 +120,11 @@ proportion_balance_plot
 proportion_balance_plot
 
 
+
+```  
+  
+  
+```{r}  
 proportion_balance_plot +   # by 
   # stamp_prop, assertion, point
   annotate(geom = GeomText, x = .5 + 1, y = 0, vjust = 1, label = "^", 
@@ -122,10 +132,48 @@ proportion_balance_plot +   # by
   # stamp_prop_label
   annotate(geom = GeomLabel, x = .5 + 1, y = 0, vjust = 0, label = .5, 
            color = "red", fill = NA) + 
-  labs(title = "Is there statistical evidence that choice to be an organ donar differs from coin flip")
+  labs(title = "Is there statistical evidence that choice to be\nan organ donar differs from coin flip") ->
+ho; ho
   
+null = 0.5  # from null hypothesis
+n = 161  # sample size
+phat = 108/n  # sample proportion of successes
+sd = sqrt(null * (1 - null)/n)  # sd of the null distribution
 
-layer_data(i = 3)
+
+compute_dnorm_prop <- function(data, scales, null = .5, dist_sds = seq(-3.5, 3.5, by = .1)){
+
+  n <- nrow(data)
+  
+  sd = sqrt(null * (1 - null)/n)
+  
+  q <- dist_sds * sd + null
+  
+  data.frame(x = q + 1) %>% 
+    mutate(y = dnorm(q, sd = sd, mean = null))
+  
+}  
+
+ho + 
+  # geom_norm on prop plot
+    qlayer(stat = qstat(compute_dnorm_prop),
+         geom = qproto_update(GeomArea, aes(alpha = .2)),
+         mapping = aes(x = 1, y = 1),
+         # null = .5
+         ) + 
+    # geom_prop_norm w/ sd marks
+    qlayer(stat = qstat(compute_dnorm_prop,
+                        default_aes = aes(xend = after_stat(x), 
+                                          yend = after_stat(0))),
+           geom = qproto_update(GeomSegment, aes(linetype = "dotted")),
+           mapping = aes(x = 1, y = 1),
+           dist_sds = -3:3)
+
+
+last_plot() + 
+  coord_cartesian(xlim = c(1.45, 1.65), ylim = c(0, 15))
+
+# layer_data(i = 3)
 
 proportion_balance_plot + 
   facet_wrap(~Default, ncol = 1) + 
@@ -135,13 +183,6 @@ proportion_balance_plot +
 coffee_height <- read_delim("https://www.isi-stats.com/isi/data/chap6/CoffeeHeight.txt")
 
 coffee_height
-
-
-
-
-
-
-
 
 coffee_height %>% 
   ggplot() + 
@@ -161,12 +202,61 @@ coffee_height %>%
                       default_aes = aes(vjust = after_stat(0),
                                         label = after_stat(round(x, 2)))),
          geom = GeomLabel) + 
-  labs(title = "Does the average height for this group differ statistically from the of 66 cm")
+  labs(title = "Does the average height for this group differ statistically from the of 66 cm") ->
+base_c_distribution; base_c_distribution
+
+base_c_distribution +
+  # stamp_prop, assertion, point
+  annotate(geom = GeomText, x = 66, y = 0, vjust = 1, label = "^", 
+           color = "red", size = 7) +
+  # stamp_prop_label
+  annotate(geom = GeomLabel, x = 66, y = 0, vjust = 0, label = 66, 
+           color = "red") 
+
+
+
+compute_dt_continuous <- function(data, scales, mean = NULL, dist_sds = seq(-3.5, 3.5, by = .1)){
+  
+  n = nrow(data)
+  if(is.null(mean)){mean <- mean(data$x)}
+  s = sd(data$x)  # sample standard deviation
+  sd = s/sqrt(n)  #
+
+  # q <- dist_sds * sd
+  
+  data.frame(x = mean + dist_sds) %>% 
+    mutate(y = dt(dist_sds, df = n-1)) %>% 
+    mutate(y = y/max(y))
+
+  
+}
+
+coffee_height %>% 
+  rename(x = height) %>% 
+  compute_dt_continuous() %>% 
+  head()
 
 last_plot() + 
+  qlayer(stat = qstat(compute_dt_continuous),
+         geom = qproto_update(GeomArea, 
+                              aes(alpha = .3)),
+         mean = 66,
+         fill = "red"
+         )
+
+
+```
+
+
+
+
+```{r}
+base_c_distribution + 
   facet_wrap(~ coffee, ncol = 1) + 
   labs(title = "Is there a statistically significant difference between the coffee drinkers\n and non-drinkers for this group?")
 ```
+
+
 
 
 
@@ -176,7 +266,7 @@ compute_panel_lm <- function(data, scales){
   data <- remove_missing(data)
   model <- lm(data = data, formula = y ~ x + cat)
   data$y <- model$fitted
-  
+
   data
   
 }
@@ -188,12 +278,11 @@ palmerpenguins::penguins %>%
 ggplot(palmerpenguins::penguins) + 
   aes(x = body_mass_g, y = flipper_length_mm, cat = species) + 
   geom_point() + 
-  # geom_parallel_slopes
+  # geom_lm_xycat
   qlayer(stat = qstat_panel(compute_panel_lm),
          geom = qproto_update(GeomLine, aes(color = "blue",
                                             linewidth = 1)),
-         aes(color = species))
-
+         aes(color = species)) 
 
 
 
