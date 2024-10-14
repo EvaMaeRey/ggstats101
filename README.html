@@ -483,7 +483,8 @@ short-hand for experimenting with layers.</p>
 </div>
 <div id="proportions-observed-v.-asserted-lesson" class="section level1">
 <h1>proportions, observed v. asserted lesson…</h1>
-<pre class="r"><code>library(tidyverse)
+<pre class="r"><code># proposed API
+library(tidyverse)
 
 isi_donor_url &lt;- &quot;https://www.isi-stats.com/isi/data/prelim/OrganDonor.txt&quot;
 
@@ -500,8 +501,10 @@ donor |&gt;
   geom_x_support() +   # line under range of x
   geom_x_prop() +      # balancing point
   geom_x_prop_label()  # balancing point (proportion) label</code></pre>
-<pre class="r fold-hide"><code>library(statexpress)
+<pre class="r fold-hide"><code># Proposed layer contents
+library(statexpress)
 library(tidyverse)
+
 
 isi_donor_url &lt;- &quot;https://www.isi-stats.com/isi/data/prelim/OrganDonor.txt&quot;
 
@@ -574,7 +577,8 @@ proportion_balance_plot</code></pre>
 <pre class="r"><code>last_plot() + 
   stamp_x_prop(prop = .5) + 
   stamp_x_prop_label(prop = .5)</code></pre>
-<pre class="r fold-hide"><code>proportion_balance_plot +   # by 
+<pre class="r fold-hide"><code># Proposed layer construction
+proportion_balance_plot +   # by 
   # stamp_prop, assertion, point
   annotate(geom = GeomText, x = .5 + 1, y = 0, vjust = 1, label = &quot;^&quot;, 
            color = &quot;red&quot;, size = 6) +
@@ -589,7 +593,8 @@ ho; ho</code></pre>
 <h2>Distribution for the null</h2>
 <pre class="r"><code>last_plot() + 
   geom_prop_null_distribution(prop = .5)</code></pre>
-<pre class="r fold-hide"><code>compute_dnorm_prop &lt;- function(data, scales, null = .5, dist_sds = seq(-3.5, 3.5, by = .1)){
+<pre class="r fold-hide"><code># Proposed layer composition
+compute_dnorm_prop &lt;- function(data, scales, null = .5, dist_sds = seq(-3.5, 3.5, by = .1)){
 
   n &lt;- nrow(data)
   
@@ -655,7 +660,8 @@ coffee_height |&gt;
   geom_x_support() +   # line under range of x
   geom_x_mean() +      # balancing point
   geom_x_mean_label()  # balancing point (proportion) label</code></pre>
-<pre class="r fold-hide"><code>coffee_height &lt;- read_delim(&quot;https://www.isi-stats.com/isi/data/chap6/CoffeeHeight.txt&quot;)
+<pre class="r fold-hide"><code># Proposed layer composition
+coffee_height &lt;- read_delim(&quot;https://www.isi-stats.com/isi/data/chap6/CoffeeHeight.txt&quot;)
 
 coffee_height %&gt;% head()
 #&gt; # A tibble: 6 × 2
@@ -694,7 +700,8 @@ base_c_distribution; base_c_distribution</code></pre>
 <pre class="r"><code>last_plot() + 
   stamp_x_mean(mean = 66) +
   stamp_x_mean_label(mean = 66)</code></pre>
-<pre class="r fold-hide"><code>base_c_distribution +
+<pre class="r fold-hide"><code># Proposed layer composition
+base_c_distribution +
   # stamp_prop, assertion, point
   annotate(geom = GeomText, x = 66, y = 0, vjust = 1, label = &quot;^&quot;, 
            color = &quot;red&quot;, size = 7) +
@@ -707,7 +714,8 @@ base_c_distribution; base_c_distribution</code></pre>
 <h2>overlay distribution for the null</h2>
 <pre class="r"><code>last_plot() +
   geom_tdist(mean = 66)</code></pre>
-<pre class="r fold-hide"><code>compute_dt_continuous &lt;- function(data, scales, 
+<pre class="r fold-hide"><code># Proposed layer composition
+compute_dt_continuous &lt;- function(data, scales, 
                                   mean = NULL, 
                                   dist_sds = seq(-3.5, 3.5, by = .1)){
   
@@ -776,7 +784,7 @@ scatter +
 scatter +
   geom_lm(y ~ x * cat)
 </code></pre>
-<pre class="r fold-hide"><code># current implementation
+<pre class="r fold-hide"><code># Proposed layer composition
 compute_panel_lm_cat &lt;- function(data, scales, formula = y ~ x + cat){
   
   data &lt;- remove_missing(data)
@@ -807,17 +815,17 @@ palmerpenguins::penguins %&gt;%
   
 ggplot(palmerpenguins::penguins) + 
   aes(x = body_mass_g, y = flipper_length_mm, cat = species) + 
-  geom_point() + 
-  # geom_lm_xycat
+  geom_point() -&gt;
+scatter
+
+scatter + 
   aes(color = species) +
   qlayer(stat = qstat_panel(compute_panel_lm_cat),
          geom = qproto_update(GeomLine, aes(color = &quot;blue&quot;,
                                             linewidth = 1)),
          formula = y ~ x)
 
-ggplot(palmerpenguins::penguins) + 
-  aes(x = body_mass_g, y = flipper_length_mm, cat = species) + 
-  geom_point() + 
+scatter + 
   # geom_lm_xycat
   aes(color = species) +
   qlayer(stat = qstat_panel(compute_panel_lm_cat),
@@ -825,22 +833,14 @@ ggplot(palmerpenguins::penguins) +
                                             linewidth = 1)),
          formula = y ~ cat) 
 
-ggplot(palmerpenguins::penguins) + 
-  aes(x = body_mass_g, y = flipper_length_mm, cat = species) + 
-  geom_point() + 
+scatter + 
   # geom_lm_xycat
   aes(color = species) +
   qlayer(stat = qstat_panel(compute_panel_lm_cat),
          geom = qproto_update(GeomLine, aes(color = &quot;blue&quot;,
                                             linewidth = 1))) 
 
-
-
-
-
-ggplot(palmerpenguins::penguins) + 
-  aes(x = body_mass_g, y = flipper_length_mm, cat = species) + 
-  geom_point() + 
+scatter + 
   aes(color = species) +
   # 1. geom_lm_xycat
   qlayer(stat = qstat_panel(compute_panel_lm_cat),

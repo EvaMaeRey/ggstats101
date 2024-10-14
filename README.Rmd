@@ -38,6 +38,7 @@ This project uses [{statexpress}](https://github.com/EvaMaeRey/statexpress) as a
 # proportions, observed v. asserted lesson...
 
 ```{r, eval = F}
+# proposed API
 library(tidyverse)
 
 isi_donor_url <- "https://www.isi-stats.com/isi/data/prelim/OrganDonor.txt"
@@ -60,8 +61,10 @@ donor |>
 
 
 ```{r, class.source = 'fold-hide'}
+# Proposed layer contents
 library(statexpress)
 library(tidyverse)
+
 
 isi_donor_url <- "https://www.isi-stats.com/isi/data/prelim/OrganDonor.txt"
 
@@ -144,6 +147,7 @@ last_plot() +
   
   
 ```{r, class.source = 'fold-hide'}  
+# Proposed layer construction
 proportion_balance_plot +   # by 
   # stamp_prop, assertion, point
   annotate(geom = GeomText, x = .5 + 1, y = 0, vjust = 1, label = "^", 
@@ -163,6 +167,7 @@ last_plot() +
 ```
 
 ```{r, class.source = 'fold-hide'}  
+# Proposed layer composition
 compute_dnorm_prop <- function(data, scales, null = .5, dist_sds = seq(-3.5, 3.5, by = .1)){
 
   n <- nrow(data)
@@ -240,6 +245,7 @@ coffee_height |>
 
 
 ```{r, class.source = 'fold-hide'}
+# Proposed layer composition
 coffee_height <- read_delim("https://www.isi-stats.com/isi/data/chap6/CoffeeHeight.txt")
 
 coffee_height %>% head()
@@ -275,6 +281,7 @@ last_plot() +
 ```
 
 ```{r, class.source = 'fold-hide'}
+# Proposed layer composition
 base_c_distribution +
   # stamp_prop, assertion, point
   annotate(geom = GeomText, x = 66, y = 0, vjust = 1, label = "^", 
@@ -294,6 +301,7 @@ last_plot() +
 
 
 ```{r, class.source = 'fold-hide'}
+# Proposed layer composition
 compute_dt_continuous <- function(data, scales, 
                                   mean = NULL, 
                                   dist_sds = seq(-3.5, 3.5, by = .1)){
@@ -366,7 +374,7 @@ scatter +
 
 
 ```{r, class.source = 'fold-hide', fig.show='hold', out.width="24%"}
-# current implementation
+# Proposed layer composition
 compute_panel_lm_cat <- function(data, scales, formula = y ~ x + cat){
   
   data <- remove_missing(data)
@@ -383,17 +391,17 @@ palmerpenguins::penguins %>%
   
 ggplot(palmerpenguins::penguins) + 
   aes(x = body_mass_g, y = flipper_length_mm, cat = species) + 
-  geom_point() + 
-  # geom_lm_xycat
+  geom_point() ->
+scatter
+
+scatter + 
   aes(color = species) +
   qlayer(stat = qstat_panel(compute_panel_lm_cat),
          geom = qproto_update(GeomLine, aes(color = "blue",
                                             linewidth = 1)),
          formula = y ~ x)
 
-ggplot(palmerpenguins::penguins) + 
-  aes(x = body_mass_g, y = flipper_length_mm, cat = species) + 
-  geom_point() + 
+scatter + 
   # geom_lm_xycat
   aes(color = species) +
   qlayer(stat = qstat_panel(compute_panel_lm_cat),
@@ -401,22 +409,14 @@ ggplot(palmerpenguins::penguins) +
                                             linewidth = 1)),
          formula = y ~ cat) 
 
-ggplot(palmerpenguins::penguins) + 
-  aes(x = body_mass_g, y = flipper_length_mm, cat = species) + 
-  geom_point() + 
+scatter + 
   # geom_lm_xycat
   aes(color = species) +
   qlayer(stat = qstat_panel(compute_panel_lm_cat),
          geom = qproto_update(GeomLine, aes(color = "blue",
                                             linewidth = 1))) 
 
-
-
-
-
-ggplot(palmerpenguins::penguins) + 
-  aes(x = body_mass_g, y = flipper_length_mm, cat = species) + 
-  geom_point() + 
+scatter + 
   aes(color = species) +
   # 1. geom_lm_xycat
   qlayer(stat = qstat_panel(compute_panel_lm_cat),
