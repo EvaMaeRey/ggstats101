@@ -340,30 +340,33 @@ base_c_distribution +
 
 # Linear model
 
+
 ```{r, eval = F}
+# target API
 ggplot(palmerpenguins::penguins) + 
   aes(x = body_mass_g, 
       y = flipper_length_mm, 
       cat = species) + 
-  geom_point() + 
-  aes(color = species) ->
-base_plot
+  geom_point() ->
+scatter
 
-base_plot +
+scatter +
   geom_lm(y ~ x)
 
-base_plot +
+scatter +
   geom_lm(y ~ cat)
 
-base_plot +
+scatter +
   geom_lm(y ~ x + cat)
 
-base_plot +
+scatter +
   geom_lm(y ~ x * cat)
 
 ```
 
+
 ```{r, class.source = 'fold-hide', fig.show='hold', out.width="24%"}
+# current implementation
 compute_panel_lm_cat <- function(data, scales, formula = y ~ x + cat){
   
   data <- remove_missing(data)
@@ -420,6 +423,8 @@ ggplot(palmerpenguins::penguins) +
          geom = qproto_update(GeomLine, aes(color = "blue",
                                             linewidth = 1)),
          formula = y ~ x * cat) 
+
+file.copy("README.html", "index.html")
 
 ```
 
